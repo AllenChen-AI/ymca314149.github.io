@@ -131,6 +131,15 @@
           const [score, setScore] = useState(0);
           const [selectedAnswer, setSelectedAnswer] = useState(null);
           const [isCorrect, setIsCorrect] = useState(null);
+          const [isLineBrowser, setIsLineBrowser] = useState(false);
+
+          // 判斷是否為 LINE 內建瀏覽器
+          useEffect(() => {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            if (ua.includes("LINE") || ua.includes("Line")) {
+              setIsLineBrowser(true);
+            }
+          }, []);
 
           // 解決手機版無法播放語音的問題 (透過使用者首次點擊解鎖音效權限)
           useEffect(() => {
@@ -159,14 +168,13 @@
             if ('speechSynthesis' in window) {
               window.speechSynthesis.cancel();
               
-              // 加上微小延遲，避免手機瀏覽器 (特別是 iOS Safari) 的語音引擎當機
-              setTimeout(() => {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'en-US';
-                utterance.rate = 0.85; 
-                utterance.pitch = 1.1; 
-                window.speechSynthesis.speak(utterance);
-              }, 50);
+              // 移除 setTimeout：LINE 內建瀏覽器對於「非同步」播放非常嚴格
+              // 必須確保語音在使用者點擊的當下立刻執行，不能有任何延遲
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = 'en-US';
+              utterance.rate = 0.85; 
+              utterance.pitch = 1.1; 
+              window.speechSynthesis.speak(utterance);
             }
           }, []);
 
@@ -246,6 +254,7 @@
               setScore(prev => prev + 1);
             }
 
+            // 這裡的 setTimeout 是為了換題，不影響語音播放
             setTimeout(() => {
               if (currentQuestionIndex < quizQuestions.length - 1) {
                 setCurrentQuestionIndex(prev => prev + 1);
@@ -259,8 +268,13 @@
           };
 
           const renderHome = () => (
-            <div className="flex flex-col items-center justify-center h-full space-y-8 animate-fade-in p-4">
-              <div className="text-center space-y-4 mb-8">
+            <div className="flex flex-col items-center justify-center h-full space-y-8 animate-fade-in p-4 relative">
+              {isLineBrowser && (
+                <div className="absolute top-4 left-4 right-4 bg-[#FFB4A2] text-[#5C4033] p-3 rounded-xl shadow-md text-sm font-bold text-center border-2 border-[#E5989B] z-10 animate-bounce">
+                  💡 發現您正使用 LINE 瀏覽器<br/>若沒聲音，請點擊右上角「⋮」或分享圖示<br/>選擇 <span className="text-white bg-[#E5989B] px-1 rounded">用預設瀏覽器開啟</span>
+                </div>
+              )}
+              <div className="text-center space-y-4 mb-8 mt-12">
                 <h1 className="text-4xl md:text-5xl font-extrabold text-[#5C4033] tracking-wider drop-shadow-md">
                   創思英文小學堂
                 </h1>
