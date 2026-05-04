@@ -132,14 +132,41 @@
           const [selectedAnswer, setSelectedAnswer] = useState(null);
           const [isCorrect, setIsCorrect] = useState(null);
 
+          // 解決手機版無法播放語音的問題 (透過使用者首次點擊解鎖音效權限)
+          useEffect(() => {
+            const unlockAudio = () => {
+              if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance('');
+                utterance.volume = 0; // 靜音播放一次來解鎖
+                window.speechSynthesis.speak(utterance);
+              }
+              // 解鎖後移除監聽器，避免重複執行
+              document.removeEventListener('touchstart', unlockAudio);
+              document.removeEventListener('click', unlockAudio);
+            };
+            
+            // 監聽使用者的第一次點擊或觸控
+            document.addEventListener('touchstart', unlockAudio);
+            document.addEventListener('click', unlockAudio);
+            
+            return () => {
+              document.removeEventListener('touchstart', unlockAudio);
+              document.removeEventListener('click', unlockAudio);
+            };
+          }, []);
+
           const playAudio = useCallback((text) => {
             if ('speechSynthesis' in window) {
               window.speechSynthesis.cancel();
-              const utterance = new SpeechSynthesisUtterance(text);
-              utterance.lang = 'en-US';
-              utterance.rate = 0.85; 
-              utterance.pitch = 1.1; 
-              window.speechSynthesis.speak(utterance);
+              
+              // 加上微小延遲，避免手機瀏覽器 (特別是 iOS Safari) 的語音引擎當機
+              setTimeout(() => {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.85; 
+                utterance.pitch = 1.1; 
+                window.speechSynthesis.speak(utterance);
+              }, 50);
             }
           }, []);
 
